@@ -15,17 +15,14 @@ import json
 from scipy.interpolate import interp1d
 from model_resnet1d import *
 
-gOdometryPub = None
-gReply = None
-
 # TODO check RoNIN test data ranges and guess measurement unit
 # TODO check if acc contains gravity
-def imuCallback(aRequest):
-    gReply.header = aRequest.header
+def imuCallback(aRequest, aArgs):
+    aArgs[1].header = aRequest.header
     # TODO replace with RoNIN processing
-    reply.pose.pose.position.x = aRequest.angular_velocity.z
-    reply.pose.pose.position.y = aRequest.linear_acceleration.y
-    gOdometryPub.publish(reply)
+    aArgs[1].pose.pose.position.x = aRequest.angular_velocity.z
+    aArgs[1].pose.pose.position.y = aRequest.linear_acceleration.y
+    aArgs[0].publish(aArgs[1])
     
 def ronin(aArgs):
     # In ROS, nodes are uniquely named. If two nodes with the same
@@ -35,22 +32,22 @@ def ronin(aArgs):
     # run simultaneously.
     rospy.init_node('ronin', anonymous=True)
 
-    gOdometryPub = rospy.Publisher('ronin_odo', Odometry, queue_size=10)
-    gReply = Odometry()
-    gReply.pose.pose.position.z = 0.0
-    gReply.pose.pose.orientation.x = 0.0
-    gReply.pose.pose.orientation.y = 0.0
-    gReply.pose.pose.orientation.z = 0.0
-    gReply.pose.pose.orientation.w = 0.0
-    gReply.pose.covariance = np.zeros(36)
-    gReply.twist.twist.linear.x = 0.0
-    gReply.twist.twist.linear.y = 0.0
-    gReply.twist.twist.linear.z = 0.0
-    gReply.twist.twist.angular.x = 0.0
-    gReply.twist.twist.angular.y = 0.0
-    gReply.twist.twist.angular.z = 0.0
-    gReply.twist.covariance = np.zeros(36)
-    rospy.Subscriber("ronin_imu", Imu, imuCallback)
+    odometryPub = rospy.Publisher('ronin_odo', Odometry, queue_size=10)
+    reply = Odometry()
+    reply.pose.pose.position.z = 0.0
+    reply.pose.pose.orientation.x = 0.0
+    reply.pose.pose.orientation.y = 0.0
+    reply.pose.pose.orientation.z = 0.0
+    reply.pose.pose.orientation.w = 0.0
+    reply.pose.covariance = np.zeros(36)
+    reply.twist.twist.linear.x = 0.0
+    reply.twist.twist.linear.y = 0.0
+    reply.twist.twist.linear.z = 0.0
+    reply.twist.twist.angular.x = 0.0
+    reply.twist.twist.angular.y = 0.0
+    reply.twist.twist.angular.z = 0.0
+    reply.twist.covariance = np.zeros(36)
+    rospy.Subscriber("ronin_imu", Imu, imuCallback, callback_args=(odometryPub,reply))
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()
