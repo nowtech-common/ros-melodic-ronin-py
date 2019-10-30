@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import rospy
+import numpy as np
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import Imu
 
@@ -15,17 +16,15 @@ from scipy.interpolate import interp1d
 from model_resnet1d import *
 
 gOdometryPub = None
+gReply = None
 
 # TODO check RoNIN test data ranges and guess measurement unit
 # TODO check if acc contains gravity
 def imuCallback(aRequest):
-    rospy.loginfo(rospy.get_caller_id() + "I heard %d", aRequest.data.header.seq)
-    reply = Odometry
-    reply.header = aRequest.data.header
+    gReply.header = aRequest.header
     # TODO replace with RoNIN processing
-    reply.pose.pose.position.x = aRequest.data.angular_velocity.x
-    reply.pose.pose.position.y = aRequest.data.linear_acceleration.y
-    reply.pose.pose.position.z = 0.0
+    reply.pose.pose.position.x = aRequest.angular_velocity.z
+    reply.pose.pose.position.y = aRequest.linear_acceleration.y
     gOdometryPub.publish(reply)
     
 def ronin(aArgs):
@@ -37,6 +36,20 @@ def ronin(aArgs):
     rospy.init_node('ronin', anonymous=True)
 
     gOdometryPub = rospy.Publisher('ronin_odo', Odometry, queue_size=10)
+    gReply = Odometry()
+    gReply.pose.pose.position.z = 0.0
+    gReply.pose.pose.orientation.x = 0.0
+    gReply.pose.pose.orientation.y = 0.0
+    gReply.pose.pose.orientation.z = 0.0
+    gReply.pose.pose.orientation.w = 0.0
+    gReply.pose.covariance = np.zeros(36)
+    gReply.twist.twist.linear.x = 0.0
+    gReply.twist.twist.linear.y = 0.0
+    gReply.twist.twist.linear.z = 0.0
+    gReply.twist.twist.angular.x = 0.0
+    gReply.twist.twist.angular.y = 0.0
+    gReply.twist.twist.angular.z = 0.0
+    gReply.twist.covariance = np.zeros(36)
     rospy.Subscriber("ronin_imu", Imu, imuCallback)
 
     # spin() simply keeps python from exiting until this node is stopped
