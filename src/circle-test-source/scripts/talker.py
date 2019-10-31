@@ -5,6 +5,7 @@ import rospy
 import std_msgs.msg
 from sensor_msgs.msg import Imu
 
+# TODO output ground truth
 def talker(aArgs):
     pub = rospy.Publisher('ronin_imu', Imu, queue_size=10)
     rospy.init_node('circle_test_source', anonymous=True)
