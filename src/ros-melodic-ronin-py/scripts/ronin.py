@@ -15,84 +15,93 @@ import json
 from scipy.interpolate import interp1d
 from model_resnet1d import *
 
+gPublisher = None
+gReply = None
+gDevice = None
+gNetwork = None
+gSlidingWindow = None
+gDecimateCounter = None
+
 # TODO check RoNIN test data ranges and guess measurement unit
 # TODO check if acc contains gravity
 def imuCallback(aRequest, aArgs):
+    global gPublisher, gReply, gDevice, gNetwork, gSlidingWindow, gDecimateCounter
+
     stepSize = aArgs[0]
     windowSize = aArgs[1]
-    publisher = aArgs[2]
-    reply = aArgs[3]
-    network = aArgs[4]
-    slidingWindow = aArgs[5]
-    decimateCounter = aArgs[6]
 
-    slidingWindow = np.roll(slidingWindow, -1)
-    slidingWindow[0, windowSize - 1] = aRequest.angular_velocity.x
-    slidingWindow[1, windowSize - 1] = aRequest.angular_velocity.y
-    slidingWindow[2, windowSize - 1] = aRequest.angular_velocity.z
-    slidingWindow[3, windowSize - 1] = aRequest.linear_acceleration.x
-    slidingWindow[4, windowSize - 1] = aRequest.linear_acceleration.y
-    slidingWindow[5, windowSize - 1] = aRequest.linear_acceleration.z
+    gSlidingWindow = np.roll(gSlidingWindow, -1)
+    gSlidingWindow[0, windowSize - 1] = aRequest.angular_velocity.x
+    gSlidingWindow[1, windowSize - 1] = aRequest.angular_velocity.y
+    gSlidingWindow[2, windowSize - 1] = aRequest.angular_velocity.z
+    gSlidingWindow[3, windowSize - 1] = aRequest.linear_acceleration.x
+    gSlidingWindow[4, windowSize - 1] = aRequest.linear_acceleration.y
+    gSlidingWindow[5, windowSize - 1] = aRequest.linear_acceleration.z
 
-    decimateCounter = decimateCounter + 1
-    if decimateCounter == stepSize:
-        result = network(slidingWindow.to(device)).cpu().detach().numpy()  # run on a [gyro0.x gyro1.x ... gyro199.x] ... [acc0.z, acc1.z ... acc199.z] chunk by calling ResNet1D.forward. For each iteration, 10 (step_size) oldest elements fall out and the same amount come in
-        print(result)
-        reply.header = aRequest.header
-        reply.pose.pose.position.x = result[0]
-        reply.pose.pose.position.y = result[1]
-        publisher.publish(reply)
-        decimateCounter = 0
+    gDecimateCounter = gDecimateCounter + 1
+    if gDecimateCounter == stepSize:
+        tensor = torch.unsqueeze(torch.from_numpy(gSlidingWindow).float(), 0)
+        result = gNetwork(tensor.to(gDevice)).cpu().detach().numpy()  # run on a [gyro0.x gyro1.x ... gyro199.x] ... [acc0.z, acc1.z ... acc199.z] chunk by calling ResNet1D.forward. For each iteration, 10 (step_size) oldest elements fall out and the same amount come in
+        gReply.header = aRequest.header
+        gReply.pose.pose.position.x = result[0][0]
+        gReply.pose.pose.position.y = result[0][1]
+        gPublisher.publish(gReply)
+        gDecimateCounter = 0
 
     
 def initRonin(aArgs):
+    global gDevice, gNetwork
+
     if args.out_dir is not None and not osp.isdir(args.out_dir):
         os.makedirs(args.out_dir)
 
     if not torch.cuda.is_available() or args.cpu:
-        device = torch.device('cpu')
+        devName = 'cpu'
+        gDevice = torch.device(devName)
         checkpoint = torch.load(args.model_path, map_location=lambda storage, location: storage) # checkpoint variable contains the model
     else:
-        device = torch.device('cuda:0')
+        devName = 'cuda:0'
+        gDevice = torch.device(devName)
         checkpoint = torch.load(args.model_path)
 
     fcConfig = {'fc_dim': 512, 'in_dim': args.window_size // 32 + 1, 'dropout': 0.5, 'trans_planes': 128}
-    network = ResNet1D(6, 2, BasicBlock1D, [2, 2, 2, 2],
+    gNetwork = ResNet1D(6, 2, BasicBlock1D, [2, 2, 2, 2],
                            base_plane=64, output_block=FCOutputModule, kernel_size=3, **fcConfig)
-    network.load_state_dict(checkpoint['model_state_dict']) #Copies parameters and buffers from state_dict into this module and its descendants.
-    network.eval().to(device)                               # Sets the module in evaluation mode. This is equivalent with self.train(False).
+    gNetwork.load_state_dict(checkpoint['model_state_dict']) #Copies parameters and buffers from state_dict into this module and its descendants.
+    gNetwork.eval().to(gDevice)                               # Sets the module in evaluation mode. This is equivalent with self.train(False).
     #  This method modifies the module in-place. the desired device of the parameters and buffers in this module
-    print('Model {} loaded to device {}.'.format(args.model_path, device))
-    return network
+    rospy.loginfo('Model %s loaded to device %s.', args.model_path, devName)
 
 
-def initRos(aArgs, aNetwork):
+def initRos(aArgs):
+    global gPublisher, gReply, gSlidingWindow, gDecimateCounter
+
     rospy.init_node('ronin', anonymous=True)
 
-    odometryPub = rospy.Publisher('ronin_odo', Odometry, queue_size=10)
-    reply = Odometry()
-    reply.pose.pose.position.z = 0.0
-    reply.pose.pose.orientation.x = 0.0
-    reply.pose.pose.orientation.y = 0.0
-    reply.pose.pose.orientation.z = 0.0
-    reply.pose.pose.orientation.w = 0.0
-    reply.pose.covariance = np.zeros(36)
-    reply.twist.twist.linear.x = 0.0
-    reply.twist.twist.linear.y = 0.0
-    reply.twist.twist.linear.z = 0.0
-    reply.twist.twist.angular.x = 0.0
-    reply.twist.twist.angular.y = 0.0
-    reply.twist.twist.angular.z = 0.0
-    reply.twist.covariance = np.zeros(36)
+    gPublisher = rospy.Publisher('ronin_odo', Odometry, queue_size=10)
+    gReply = Odometry()
+    gReply.pose.pose.position.z = 0.0
+    gReply.pose.pose.orientation.x = 0.0
+    gReply.pose.pose.orientation.y = 0.0
+    gReply.pose.pose.orientation.z = 0.0
+    gReply.pose.pose.orientation.w = 0.0
+    gReply.pose.covariance = np.zeros(36)
+    gReply.twist.twist.linear.x = 0.0
+    gReply.twist.twist.linear.y = 0.0
+    gReply.twist.twist.linear.z = 0.0
+    gReply.twist.twist.angular.x = 0.0
+    gReply.twist.twist.angular.y = 0.0
+    gReply.twist.twist.angular.z = 0.0
+    gReply.twist.covariance = np.zeros(36)
 
-    slidingWindow = np.zeros((6, aArgs.window_size))
-    decimateCounter = 0
-    rospy.Subscriber("ronin_imu", Imu, imuCallback, callback_args=(aArgs.step_size, aArgs.window_size, odometryPub, reply, aNetwork, slidingWindow, decimateCounter))
+    gSlidingWindow = np.zeros((6, aArgs.window_size))
+    gDecimateCounter = 0
+    rospy.Subscriber("ronin_imu", Imu, imuCallback, callback_args=(aArgs.step_size, aArgs.window_size))
 
 
 def ronin(aArgs):
-    network = initRonin(aArgs)
-    initRos(aArgs, network)
+    initRonin(aArgs)
+    initRos(aArgs)
     rospy.spin()
 
 
