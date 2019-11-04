@@ -35,15 +35,11 @@ def talker(aArgs):
         rate.sleep()
 
 if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--radius', type=float, default=1.0)
-    parser.add_argument('--omega_max', type=float, default=1.0)
-    parser.add_argument('--sampling_freq', type=int, default=200)
-    parser.add_argument('--envelope_freq', type=float, default=0.5 / math.pi)
-
-    args = parser.parse_args()
+    args = {}
+    args["radius"] = rospy.get_param('/circle_test_source/radius', 1.0)
+    args["omega_max"] = rospy.get_param('/circle_test_source/omega_max' 1.0)
+    args["sampling_freq"] = rospy.get_param('/circle_test_source/sampling_freq', 200)
+    args["envelope_freq"] = rospy.get_param('/circle_test_source/envelope_freq', 0.5 / math.pi)
 
     try:
         talker(args)

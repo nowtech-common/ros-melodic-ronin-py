@@ -76,7 +76,7 @@ def initRonin(aArgs):
 def initRos(aArgs):
     global gPublisher, gReply, gSlidingWindow, gDecimateCounter
 
-    rospy.init_node('ronin', anonymous=True)
+    rospy.init_node('ros_melodic_ronin', anonymous=True)
 
     gPublisher = rospy.Publisher('ronin_odo', Odometry, queue_size=10)
     gReply = Odometry()
@@ -106,18 +106,9 @@ def ronin(aArgs):
 
 
 if __name__ == '__main__':
-    import argparse
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--max_ori_error', type=float, default=20.0)
-    parser.add_argument('--step_size', type=int, default=10)
-    parser.add_argument('--window_size', type=int, default=200)
-    parser.add_argument('--cpu', action='store_true')
-    parser.add_argument('--show_plot', action='store_true')
-    parser.add_argument('--out_dir', type=str, default=None)
-    parser.add_argument('--model_path', type=str, default='/home/balazs/munka/nowtech/repos/nowtechnologies/ronin/models/ronin_resnet/checkpoint_gsn_latest.pt')
-
-    args = parser.parse_args()
-
-    np.set_printoptions(formatter={'all': lambda x: '{:.6f}'.format(x)})
+    args = {}
+    args["step_size"] = rospy.get_param('/ros-melodic-ronin/step_size', 10)
+    args["window_size"] = rospy.get_param('/ros-melodic-ronin/window_size' 200)
+    args["cpu"] = rospy.get_param('/ros-melodic-ronin/cpu', True)
+    args["model_path"] = rospy.get_param('/ros-melodic-ronin/model_path') # /home/balazs/munka/nowtech/repos/nowtechnologies/ronin/models/ronin_resnet/checkpoint_gsn_latest.pt
     ronin(args)
