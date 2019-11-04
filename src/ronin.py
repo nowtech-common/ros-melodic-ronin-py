@@ -52,25 +52,22 @@ def imuCallback(aRequest, aArgs):
 def initRonin(aArgs):
     global gDevice, gNetwork
 
-    if args.out_dir is not None and not osp.isdir(args.out_dir):
-        os.makedirs(args.out_dir)
-
-    if not torch.cuda.is_available() or args.cpu:
+    if not torch.cuda.is_available() or aArgs["cpu"]:
         devName = 'cpu'
         gDevice = torch.device(devName)
-        checkpoint = torch.load(args.model_path, map_location=lambda storage, location: storage) # checkpoint variable contains the model
+        checkpoint = torch.load(aArgs["model_path"], map_location=lambda storage, location: storage) # checkpoint variable contains the model
     else:
         devName = 'cuda:0'
         gDevice = torch.device(devName)
         checkpoint = torch.load(args.model_path)
 
-    fcConfig = {'fc_dim': 512, 'in_dim': args.window_size // 32 + 1, 'dropout': 0.5, 'trans_planes': 128}
+    fcConfig = {'fc_dim': 512, 'in_dim': args["window_size"] // 32 + 1, 'dropout': 0.5, 'trans_planes': 128}
     gNetwork = ResNet1D(6, 2, BasicBlock1D, [2, 2, 2, 2],
                            base_plane=64, output_block=FCOutputModule, kernel_size=3, **fcConfig)
     gNetwork.load_state_dict(checkpoint['model_state_dict']) #Copies parameters and buffers from state_dict into this module and its descendants.
     gNetwork.eval().to(gDevice)                               # Sets the module in evaluation mode. This is equivalent with self.train(False).
     #  This method modifies the module in-place. the desired device of the parameters and buffers in this module
-    rospy.loginfo('Model %s loaded to device %s.', args.model_path, devName)
+    rospy.loginfo('Model %s loaded to device %s.', args["model_path"], devName)
 
 
 def initRos(aArgs):
@@ -94,9 +91,9 @@ def initRos(aArgs):
     gReply.twist.twist.angular.z = 0.0
     gReply.twist.covariance = np.zeros(36)
 
-    gSlidingWindow = np.zeros((6, aArgs.window_size))
+    gSlidingWindow = np.zeros((6, aArgs["window_size"]))
     gDecimateCounter = 0
-    rospy.Subscriber("ronin_imu", Imu, imuCallback, callback_args=(aArgs.step_size, aArgs.window_size))
+    rospy.Subscriber("ronin_imu", Imu, imuCallback, callback_args=(aArgs["step_size"], aArgs["window_size"]))
 
 
 def ronin(aArgs):
@@ -107,8 +104,8 @@ def ronin(aArgs):
 
 if __name__ == '__main__':
     args = {}
-    args["step_size"] = rospy.get_param('/ros-melodic-ronin/step_size', 10)
-    args["window_size"] = rospy.get_param('/ros-melodic-ronin/window_size' 200)
-    args["cpu"] = rospy.get_param('/ros-melodic-ronin/cpu', True)
-    args["model_path"] = rospy.get_param('/ros-melodic-ronin/model_path') # /home/balazs/munka/nowtech/repos/nowtechnologies/ronin/models/ronin_resnet/checkpoint_gsn_latest.pt
+    args["step_size"] = rospy.get_param('/ros_melodic_ronin/step_size')
+    args["window_size"] = rospy.get_param('/ros_melodic_ronin/window_size')
+    args["cpu"] = rospy.get_param('/ros_melodic_ronin/cpu')
+    args["model_path"] = rospy.get_param('/ros_melodic_ronin/model_path') # /home/balazs/munka/nowtech/repos/nowtechnologies/ronin/models/ronin_resnet/checkpoint_gsn_latest.pt
     ronin(args)
