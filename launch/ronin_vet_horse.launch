@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+  <node name="ros_melodic_ronin" pkg="ros_melodic_ronin" type="ronin.py">
+    <remap from="ronin_imu"    to="/imu/data_raw" />
+    <param name="step_size"    value="10" />
+    <param name="window_size"  value="200" />
+    <param name="cpu"          value="True" />
+    <param name="model_path"   value="/home/balazs/munka/nowtech/repos/nowtechnologies/ronin/models/ronin_resnet/checkpoint_gsn_latest.pt" />
+  </node>
+</launch>

@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>ros-melodic-ronin</name>
+  <name>ros_melodic_ronin</name>
   <version>1.0.0</version>
-  <description>The ros-melodic-ronin package</description>
+  <description>The ros_melodic_ronin package</description>
   <maintainer email="balazs@nowtech.hu">Balazs Bamer</maintainer>
   <license>GPLv3</license>
   <url type="website">https://github.com/nowtechnologies/ros-melodic-ronin-py</url>
