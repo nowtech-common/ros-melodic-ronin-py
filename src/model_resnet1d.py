@@ -1,6 +1,8 @@
-"""
-The code is based on the original ResNet implementation from torchvision.models.resnet
-"""
+#
+# GNU General Public License v3.0
+#
+# [Yan, H., Herath, S. and Furukawa, Y. (2019). RoNIN: Robust Neural Inertial Navigation in the Wild: Benchmark, Evaluations, and New Methods. [online] arXiv.org. Available at: https://arxiv.org/abs/1905.12853](https://arxiv.org/abs/1905.12853)
+#
 
 import torch
 import torch.nn as nn

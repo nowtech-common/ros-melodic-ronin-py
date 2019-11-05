@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+#
+# GNU General Public License v3.0
+#
+# This ROS node is based on this work:
+# [Yan, H., Herath, S. and Furukawa, Y. (2019). RoNIN: Robust Neural Inertial Navigation in the Wild: Benchmark, Evaluations, and New Methods. [online] arXiv.org. Available at: https://arxiv.org/abs/1905.12853](https://arxiv.org/abs/1905.12853)
+#
+
 import sys
 import rospy
 import numpy as np
@@ -22,8 +29,6 @@ gNetwork = None
 gSlidingWindow = None
 gDecimateCounter = None
 
-# TODO check RoNIN test data ranges and guess measurement unit
-# TODO check if acc contains gravity
 def imuCallback(aRequest, aArgs):
     global gPublisher, gReply, gDevice, gNetwork, gSlidingWindow, gDecimateCounter
 
@@ -55,7 +60,7 @@ def initRonin(aArgs):
     if not torch.cuda.is_available() or aArgs["cpu"]:
         devName = 'cpu'
         gDevice = torch.device(devName)
-        checkpoint = torch.load(aArgs["model_path"], map_location=lambda storage, location: storage) # checkpoint variable contains the model
+        checkpoint = torch.load(aArgs["model_path"], map_location=lambda storage, location: storage)
     else:
         devName = 'cuda:0'
         gDevice = torch.device(devName)
@@ -64,9 +69,8 @@ def initRonin(aArgs):
     fcConfig = {'fc_dim': 512, 'in_dim': args["window_size"] // 32 + 1, 'dropout': 0.5, 'trans_planes': 128}
     gNetwork = ResNet1D(6, 2, BasicBlock1D, [2, 2, 2, 2],
                            base_plane=64, output_block=FCOutputModule, kernel_size=3, **fcConfig)
-    gNetwork.load_state_dict(checkpoint['model_state_dict']) #Copies parameters and buffers from state_dict into this module and its descendants.
-    gNetwork.eval().to(gDevice)                               # Sets the module in evaluation mode. This is equivalent with self.train(False).
-    #  This method modifies the module in-place. the desired device of the parameters and buffers in this module
+    gNetwork.load_state_dict(checkpoint['model_state_dict'])
+    gNetwork.eval().to(gDevice)
     rospy.loginfo('Model %s loaded to device %s.', args["model_path"], devName)
 
 
