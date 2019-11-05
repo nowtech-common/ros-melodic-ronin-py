@@ -11,7 +11,7 @@ ROS-Melodic, python3, numpy, numpy-quaternion, torch, tqdm, scipy
 
 ### Usage:
 1. Clone the repository.
-2. (Optional) Download the pre-trained models<sup>1</sup> from [HERE](https://www.dropbox.com/sh/3adl8zyp2y91otf/AABIRBecKwMJotMSrWE0z2n0a?dl=0). 
+2. Download the pre-trained models from [HERE](https://www.dropbox.com/sh/3adl8zyp2y91otf/AABIRBecKwMJotMSrWE0z2n0a?dl=0). 
 3. The node resides in **ros_melodic_ronin** package. It subscribes to **ronin_imu** topic for sensor_msgs/Imu messages. It only considers accelerometer and gyroscope data.
    The output position is published in **ronin_odo** topic in nav_msgs/Odometry messages. Only the position X and Y values are updated.
 4. Consult the launch files for model parameters. The contained values are the same as were used to train the model.
