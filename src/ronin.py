@@ -64,7 +64,7 @@ def initRonin(aArgs):
     else:
         devName = 'cuda:0'
         gDevice = torch.device(devName)
-        checkpoint = torch.load(args.model_path)
+        checkpoint = torch.load(aArgs["model_path"])
 
     fcConfig = {'fc_dim': 512, 'in_dim': args["window_size"] // 32 + 1, 'dropout': 0.5, 'trans_planes': 128}
     gNetwork = ResNet1D(6, 2, BasicBlock1D, [2, 2, 2, 2],
